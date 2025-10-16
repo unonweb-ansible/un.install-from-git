@@ -1,0 +1,16 @@
+---
+un_install_from_git:
+  user:
+  state: present
+  src:
+    exec: main.sh
+  git:
+    repo:
+    force: false
+  dst:
+    dir: 
+      path:
+      mode: o=rwx,g=,o=rx
+    exec: 
+      mode: u=rwx,g=,o=rx
+      link_to:

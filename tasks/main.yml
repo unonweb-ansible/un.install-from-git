@@ -1,0 +1,84 @@
+---
+# NOTES
+# -----
+# https://docs.ansible.com/ansible/latest/collections/ansible/builtin/git_module.html
+
+- name: un.install-from-git role
+  tags:
+    - un.install-from-git
+  block:
+
+  # state: present
+  - when: un_install_from_git.state == "present"
+    block:
+
+    # copy
+    - block:
+
+      # mkdir
+      - name: Mkdir {{ un_install_from_git.dst.dir.path }}
+        become: true
+        ansible.builtin.file:
+          path: "{{ un_install_from_git.dst.dir.path }}"
+          state: directory
+          mode: "{{ un_install_from_git.dst.dir.mode }}"
+          owner: "{{ 'root' if un_install_from_git.user is not defined else un_install_from_git.user }}"
+          group: "{{ 'root' if un_install_from_git.user is not defined else un_install_from_git.user }}"
+
+      # git
+      - name: Git clone/pull {{ un_install_from_git.git.repo }}
+        become: true
+        become_user: "{{ un_install_from_git.user }}"
+        ansible.builtin.git:
+          repo: "{{ un_install_from_git.git.repo }}"
+          dest: "{{ un_install_from_git.dst.dir.path }}" # The repo name is not appended to this path and the destination directory must be empty. This parameter is required, unless clone is set to false.
+          remote: origin
+          clone: true
+          update: true # retrieve new revisions from the origin repository.
+          force: "{{ un_install_from_git.git.force }}"
+          accept_hostkey: true
+
+    # link main exec 
+    - when: un_install_from_git.dst.exec.link_to != None
+      block:
+
+      # many links
+      - name: Create links to {{ un_install_from_git.dst.exec.link_to }}
+        become: true
+        loop: "{{ un_install_from_git.dst.exec.link_to if un_install_from_git.dst.exec.link_to is not string and un_install_from_git.dst.exec.link_to is iterable else [] }}" 
+        ansible.builtin.file:
+          src: "{{ un_install_from_git.dst.dir.path }}/src/{{ un_install_from_git.src.exec }}" # ... /src/ ... hardcoded!
+          dest: "{{ item }}"
+          state: link
+          owner: "{{ 'root' if un_install_from_git.user is not defined else un_install_from_git.user }}"
+          group: "{{ 'root' if un_install_from_git.user is not defined else un_install_from_git.user }}"
+      
+      # one link
+      - when: un_install_from_git.dst.exec.link_to is string
+        name: Create link to {{ un_install_from_git.dst.exec.link_to }}
+        become: true
+        ansible.builtin.file:
+          src: "{{ un_install_from_git.dst.dir.path }}/src/{{ un_install_from_git.src.exec }}" # ... /src/ ... hardcoded!
+          dest: "{{ un_install_from_git.dst.exec.link_to }}"
+          state: link
+          owner: "{{ 'root' if un_install_from_git.user is not defined else un_install_from_git.user }}"
+          group: "{{ 'root' if un_install_from_git.user is not defined else un_install_from_git.user }}"
+
+    # chmod main exec
+    - name: Chmod {{ un_install_from_git.dst.dir.path }}/src/{{ un_install_from_git.src.exec }}
+      become: true
+      ansible.builtin.file:
+        path: "{{ un_install_from_git.dst.dir.path }}/src/{{ un_install_from_git.src.exec }}"
+        mode: "{{ un_install_from_git.dst.exec.mode }}"
+
+  # state: absent
+  - when: un_install_from_git.state == "absent"
+    name: Remove {{ role_name }}
+    become: true
+    failed_when: false
+    loop:
+    - "{{ un_install_from_git.dst.dir.path }}"
+    - "{{ un_install_from_git.dst.exec.link_to }}"
+    ansible.builtin.file:
+      path: "{{ item }}"
+      state: absent
