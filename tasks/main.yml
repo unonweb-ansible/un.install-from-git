@@ -8,6 +8,13 @@
     - un.install-from-git
   block:
 
+  # debug
+  - when: false
+    ansible.builtin.debug:
+      msg: 
+      - "{{ un_install_from_git.files.cp }}"
+      - "{{ un_install_from_git.files.cp | length }}"
+      
   # state: present
   - when: un_install_from_git.state == "present"
     block:
@@ -70,6 +77,18 @@
       ansible.builtin.file:
         path: "{{ un_install_from_git.dst.dir.path }}/src/{{ un_install_from_git.src.exec }}"
         mode: "{{ un_install_from_git.dst.exec.mode }}"
+    
+    # cp files
+    - when: un_install_from_git.files.cp | length > 0
+      name: Copy {{ un_install_from_git.files.cp }} to {{ un_install_from_git.dst.dir.path }}
+      become: true
+      loop: "{{ un_install_from_git.files.cp }}"
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ un_install_from_git.dst.dir.path }}"
+        owner: "{{ 'root' if un_install_from_git.user is not defined else un_install_from_git.user }}"
+        group: "{{ 'root' if un_install_from_git.user is not defined else un_install_from_git.user }}"
+        mode: preserve
 
   # state: absent
   - when: un_install_from_git.state == "absent"

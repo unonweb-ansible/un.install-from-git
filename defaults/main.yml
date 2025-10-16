@@ -2,11 +2,13 @@
 un_install_from_git:
   user:
   state: present
-  src:
-    exec: main.sh
   git:
     repo:
     force: false
+  files:
+    cp: []
+  src:
+    exec: main.sh
   dst:
     dir: 
       path:
